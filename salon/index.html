@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru" data-scheme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>LUMÉA — демо мини-аппа салона красоты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230C0B0A'/%3E%3Cpath d='M16 5c2.6 4.4 5.6 7.4 10 10-4.4 2.6-7.4 5.6-10 10-2.6-4.4-5.6-7.4-10-10 4.4-2.6 7.4-5.6 10-10z' fill='none' stroke='%23C9A24D' stroke-width='1.6'/%3E%3C/svg%3E" />
+</head>
+<body>
+<div class="app" id="app">
+
+  <p class="notice" id="notice" hidden>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 4 3 11l6 2.4M21 4l-3 16-9-6.6M21 4 9 13.4v5.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Портфолио-демо в браузере. Внутри Telegram работают нативная кнопка, хаптика и тема клиента. Все данные — примеры.</span>
+  </p>
+
+  <header class="topbar">
+    <div class="topbar__brand">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 3.5c2.9 5 6.6 8.7 12.5 11.5C22.6 17.8 18.9 21.5 16 26.5 13.1 21.5 9.4 17.8 3.5 15 9.4 12.2 13.1 8.5 16 3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="16" cy="15" r="2.6" stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+      <span class="wordmark">LUMÉA</span>
+    </div>
+    <p class="topbar__hello" id="hello">Салон красоты · демо</p>
+  </header>
+
+  <main id="views">
+
+    <!-- ===== ГЛАВНАЯ ===== -->
+    <section class="view is-active" data-view="home">
+      <div class="cover">
+        <img src="img/hero.jpg" alt="Пример интерьера салона" />
+        <div class="cover__body">
+          <p class="eyebrow" id="eyebrow">Город · с 20XX</p>
+          <h1>Красота,<br /><em>рассказанная</em> светом</h1>
+          <p class="cover__lede">Шаблон мини-аппа для салона: услуги, мастера и запись без звонков. Текст и фото меняются под ваш бренд.</p>
+          <p class="badge">Демо-концепт · портфолио</p>
+        </div>
+      </div>
+
+      <div class="quick">
+        <button class="quick__btn" type="button" data-go="services">
+          <span class="quick__ico">✧</span>
+          <span><b>Выбрать услугу</b><i>14 позиций прайса</i></span>
+        </button>
+        <button class="quick__btn" type="button" data-go="team">
+          <span class="quick__ico">◈</span>
+          <span><b>Мастера</b><i>3 карточки в примере</i></span>
+        </button>
+      </div>
+
+      <h2 class="h-sec">Свободно сегодня</h2>
+      <div class="chips" id="todaySlots"></div>
+
+      <h2 class="h-sec">Гости говорят</h2>
+      <div class="rail" id="reviewRail"></div>
+
+      <h2 class="h-sec">Салон</h2>
+      <div class="rail rail--photo">
+        <img src="img/g2.jpg" alt="Пример работы 1" loading="lazy" decoding="async" />
+        <img src="img/g1.jpg" alt="Пример работы 2" loading="lazy" decoding="async" />
+        <img src="img/g3.jpg" alt="Пример работы 3" loading="lazy" decoding="async" />
+      </div>
+
+      <ul class="info">
+        <li><span>Адрес</span><b id="infoAddress">Город, улица, дом</b></li>
+        <li><span>Часы</span><b id="infoHours">Пн–Сб 10–21 · Вс 11–19</b></li>
+        <li><span>Телефон</span><b id="infoPhone">+7 000 000 00 00</b></li>
+        <li><span>Почта</span><b id="infoEmail">mail@example.com</b></li>
+      </ul>
+      <button class="link-btn" type="button" id="writeAdmin">Написать администратору в Telegram</button>
+      <p class="disclaimer">Демонстрационный проект. Название, контакты, мастера и отзывы — примеры для показа возможностей мини-аппа.</p>
+    </section>
+
+    <!-- ===== УСЛУГИ ===== -->
+    <section class="view" data-view="services">
+      <h2 class="h-view">Услуги и ритуалы</h2>
+      <p class="sub">Отмеченное сразу попадает в запись — стоимость и время считаются сами.</p>
+      <div class="chips chips--filter" id="filters">
+        <button class="chip is-active" data-filter="all" type="button">Всё</button>
+        <button class="chip" data-filter="hair" type="button">Волосы</button>
+        <button class="chip" data-filter="color" type="button">Окрашивание</button>
+        <button class="chip" data-filter="nails" type="button">Ногти</button>
+        <button class="chip" data-filter="face" type="button">Лицо и брови</button>
+      </div>
+      <div class="list" id="serviceList"></div>
+    </section>
+
+    <!-- ===== МАСТЕРА ===== -->
+    <section class="view" data-view="team">
+      <h2 class="h-view">Мастера</h2>
+      <p class="sub">Карточки мастеров с фото, специализацией и описанием — данные подставляются из вашей базы.</p>
+      <div class="team" id="teamList"></div>
+    </section>
+
+    <!-- ===== ЗАПИСЬ ===== -->
+    <section class="view" data-view="book">
+      <h2 class="h-view">Запись</h2>
+      <ol class="steps" id="steps">
+        <li><span>1</span>Услуги</li><li><span>2</span>Мастер</li><li><span>3</span>Время</li><li><span>4</span>Контакт</li>
+      </ol>
+
+      <div class="step" data-step="1">
+        <div class="list" id="pickServices"></div>
+      </div>
+
+      <div class="step" data-step="2" hidden>
+        <div class="list" id="pickMasters"></div>
+      </div>
+
+      <div class="step" data-step="3" hidden>
+        <p class="label">День</p>
+        <div class="dates" id="dates"></div>
+        <p class="label">Свободное время</p>
+        <div class="slots" id="slots"></div>
+      </div>
+
+      <div class="step" data-step="4" hidden>
+        <form class="form" id="form" novalidate>
+          <div class="field">
+            <label for="fName">Имя</label>
+            <input id="fName" type="text" placeholder="Ваше имя" autocomplete="name" />
+            <p class="err" data-for="fName" hidden>Укажите имя — хотя бы две буквы.</p>
+          </div>
+          <div class="field">
+            <label for="fPhone">Телефон</label>
+            <input id="fPhone" type="tel" inputmode="tel" placeholder="+7 (___) ___ __ __" autocomplete="tel" />
+            <p class="err" data-for="fPhone" hidden>Нужен номер из 11 цифр, начиная с 7.</p>
+          </div>
+          <div class="field">
+            <label for="fNote">Пожелания <span class="hint">— необязательно</span></label>
+            <textarea id="fNote" rows="3" placeholder="Например: тёплый оттенок, длина до плеч"></textarea>
+          </div>
+        </form>
+      </div>
+
+      <aside class="cart" id="cart" aria-live="polite">
+        <div class="cart__empty" id="cartEmpty">Отметьте услуги — здесь появится смета визита.</div>
+        <ul class="cart__list" id="cartList"></ul>
+        <div class="cart__meta" id="cartMeta"></div>
+        <div class="cart__total"><span>Итого</span><strong id="cartTotal">0 ₸</strong></div>
+      </aside>
+
+      <div class="fake-nav" id="fakeBack" hidden>
+        <button class="btn btn--ghost" type="button" id="btnBack">Назад</button>
+      </div>
+    </section>
+
+    <!-- ===== ЗАПИСИ ===== -->
+    <section class="view" data-view="visits">
+      <h2 class="h-view">Мои записи</h2>
+      <div id="visitsWrap"></div>
+    </section>
+  </main>
+
+  <!-- эмуляция MainButton вне Telegram -->
+  <div class="mainbtn" id="mainbtn" hidden>
+    <button type="button" id="mainbtnBtn"><span id="mainbtnText">Далее</span></button>
+  </div>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab is-active" data-go="home" type="button">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      Главная
+    </button>
+    <button class="tab" data-go="services" type="button">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5c2.2 3.8 5 6.6 9 8.5-4 1.9-6.8 4.7-9 8.5-2.2-3.8-5-6.6-9-8.5 4-1.9 6.8-4.7 9-8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      Услуги
+    </button>
+    <button class="tab" data-go="book" type="button">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15.5" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9.5h17M8 3.5V6m8-2.5V6m-6.5 8.5 1.8 1.8 3.7-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Запись
+      <i class="dot" id="tabDot" hidden></i>
+    </button>
+    <button class="tab" data-go="visits" type="button">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="3.8" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 20c1.4-3.4 4.2-5 7.5-5s5.9 1.6 7.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Записи
+    </button>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet__scrim" data-close></div>
+  <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sparkle" aria-hidden="true"></div>
+    <svg class="sheet__mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+      <path class="tick" d="m15 24.5 6 6 12-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h3 id="sheetTitle">Вы записаны</h3>
+    <p class="sheet__lede" id="sheetLede"></p>
+    <ul class="sheet__list" id="sheetList"></ul>
+    <button class="btn btn--primary" type="button" data-close>Прекрасно</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
