@@ -23,9 +23,11 @@ const SALON = {
   adminLink: 'https://t.me/telegram',   // ссылка на чат администратора
   openHour: 10, closeHour: 21,          // сетка слотов записи
 };
+/* адрес backend на Render; пусто — демо-режим без сервера */
+const API_URL = 'https://salon-api.onrender.com';
 
 /* ---------------- данные ---------------- */
-const SERVICES = [
+let SERVICES = [
   { id: 'cut-woman', cat: 'hair',  name: 'Женская стрижка', desc: 'Диагностика формы, стрижка и укладка с термозащитой.', price: 18000, min: 90 },
   { id: 'cut-man',   cat: 'hair',  name: 'Мужская стрижка',  desc: 'Классика или фейд, оформление бороды по желанию.', price: 12000, min: 60 },
   { id: 'style',     cat: 'hair',  name: 'Вечерняя укладка', desc: 'Голливудская волна, локоны или гладкий пучок.', price: 15000, min: 75 },
@@ -41,7 +43,7 @@ const SERVICES = [
   { id: 'makeup',    cat: 'face',  name: 'Макияж вечерний', desc: 'Люминайзинг-база, стойкие пигменты, схема на вечер.', price: 22000, min: 90 },
   { id: 'facial',    cat: 'face',  name: 'Уход за лицом «Сияние»', desc: 'Чистка, энзимный пилинг, альгинатная маска.', price: 28000, min: 90 },
 ];
-const MASTERS = [
+let MASTERS = [
   { id: 'm1', name: 'Мастер 1', role: 'Стилист-парикмахер', bio: 'Здесь будет описание мастера: опыт, техники, обучение.', photo: 'img/master1.jpg', skills: ['hair', 'color'] },
   { id: 'm2', name: 'Мастер 2', role: 'Колорист', bio: 'Здесь будет описание мастера: направления работы и специализация.', photo: 'img/master2.jpg', skills: ['color', 'hair', 'nails'] },
   { id: 'm3', name: 'Мастер 3', role: 'Визажист, бровист', bio: 'Здесь будет описание мастера: услуги и подход к работе.', photo: 'img/master3.jpg', skills: ['face', 'nails'] },
@@ -61,6 +63,28 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const money = n => n.toLocaleString('ru-RU').replace(/,/g, ' ') + ' ₸';
 const dur = m => (m >= 60 ? `${Math.floor(m / 60)} ч${m % 60 ? ' ' + (m % 60) + ' мин' : ''}` : `${m} мин`);
 const CHECK = `<svg viewBox="0 0 24 24" fill="none"><path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/* ---------------- backend API ---------------- */
+async function api(path, opts = {}) {
+  const r = await fetch(API_URL + path, {
+    ...opts,
+    headers: { 'content-type': 'application/json', 'x-init-data': (tg && tg.initData) || '', ...(opts.headers || {}) },
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(body.error || 'http ' + r.status); e.status = r.status; throw e; }
+  return body;
+}
+const online = () => !!API_URL;
+const authed = () => online() && inTG && !!tg.initData;
+async function loadCatalog() {
+  if (!online()) return;
+  try {
+    const c = await api('/api/catalog');
+    if (c.services && c.services.length) SERVICES = c.services;
+    if (c.masters && c.masters.length) MASTERS = c.masters.map(m => ({ ...m, photo: m.photo || 'img/master1.jpg' }));
+  } catch (e) { console.warn('catalog', e); }
+}
+const fmtTime = t => t.replace(/^0/, '');
 
 /* ---------------- подстановка настроек в разметку ---------------- */
 function applyConfig() {
@@ -126,7 +150,7 @@ function go(view, { silent } = {}) {
   $$('.view').forEach(v => v.classList.toggle('is-active', v.dataset.view === view));
   $$('.tab').forEach(t => t.classList.toggle('is-active', t.dataset.go === view));
   window.scrollTo({ top: 0, behavior: silent ? 'auto' : 'smooth' });
-  if (view === 'visits') renderVisits();
+  if (view === 'visits') { if (authed()) loadVisits(renderVisits); else renderVisits(); }
   syncChrome();
   if (!silent) haptic.tap();
 }
@@ -192,7 +216,7 @@ document.addEventListener('click', e => {
 });
 
 /* ---------------- мастера ---------------- */
-$('#teamList').innerHTML = MASTERS.map(m => `
+function renderTeam() { $('#teamList').innerHTML = MASTERS.map(m => `
   <article class="member">
     <img src="${m.photo}" alt="${m.name}, ${m.role}" loading="lazy" />
     <div class="member__txt">
@@ -201,7 +225,8 @@ $('#teamList').innerHTML = MASTERS.map(m => `
       <p class="member__bio">${m.bio}</p>
       <div class="member__tags">${m.skills.map(s => `<span class="tag">${CAT[s]}</span>`).join('')}</div>
     </div>
-  </article>`).join('');
+  </article>`).join(''); }
+renderTeam();
 
 const fits = id => {
   const m = MASTERS.find(x => x.id === id);
@@ -251,10 +276,32 @@ $('#dates').addEventListener('click', e => {
   $$('#dates .date').forEach(x => x.classList.toggle('is-on', x === b));
   haptic.pick(); renderSlots(); renderCart(); syncChrome();
 });
-function renderSlots() {
+let slotReq = 0;
+state.slotMap = {};
+async function renderSlots() {
   if (!state.date) { $('#slots').innerHTML = `<p class="sub" style="grid-column:1/-1;margin:0">Сначала выберите день.</p>`; return; }
-  $('#slots').innerHTML = TIMES.map((t, i) =>
-    `<button class="slot${state.slot === t ? ' is-on' : ''}" type="button" data-slot="${t}" ${busy(state.date, state.master, i) ? 'disabled' : ''}>${t}</button>`).join('');
+  if (!online()) {
+    $('#slots').innerHTML = TIMES.map((t, i) =>
+      `<button class="slot${state.slot === t ? ' is-on' : ''}" type="button" data-slot="${t}" ${busy(state.date, state.master, i) ? 'disabled' : ''}>${t}</button>`).join('');
+    return;
+  }
+  if (!state.picked.size) { $('#slots').innerHTML = `<p class="sub" style="grid-column:1/-1;margin:0">Сначала выберите услуги.</p>`; return; }
+  const id = ++slotReq;
+  $('#slots').innerHTML = `<p class="sub" style="grid-column:1/-1;margin:0">Ищем свободное время…</p>`;
+  try {
+    const q = new URLSearchParams({ date: state.date, master: state.master || 'any', services: [...state.picked].join(',') });
+    const list = await api('/api/slots?' + q);
+    if (id !== slotReq) return;
+    state.slotMap = Object.fromEntries(list.map(x => [fmtTime(x.time), x.start_at]));
+    if (state.slot && !state.slotMap[state.slot]) state.slot = null;
+    $('#slots').innerHTML = list.length
+      ? list.map(x => { const t = fmtTime(x.time); return `<button class="slot${state.slot === t ? ' is-on' : ''}" type="button" data-slot="${t}">${t}</button>`; }).join('')
+      : `<p class="sub" style="grid-column:1/-1;margin:0">На этот день свободного времени нет — выберите другой.</p>`;
+  } catch (e) {
+    if (id !== slotReq) return;
+    $('#slots').innerHTML = `<p class="sub" style="grid-column:1/-1;margin:0">Не удалось загрузить время. Попробуйте ещё раз.</p>`;
+  }
+  syncChrome();
 }
 $('#slots').addEventListener('click', e => {
   const b = e.target.closest('[data-slot]'); if (!b || b.disabled) return;
@@ -264,9 +311,16 @@ $('#slots').addEventListener('click', e => {
 });
 
 /* быстрые окна на главной */
-function renderToday() {
+async function renderToday() {
   const k = dkey(days[0]);
-  const free = TIMES.filter((t, i) => !busy(k, null, i)).slice(0, 6);
+  let free = TIMES.filter((t, i) => !busy(k, null, i)).slice(0, 6);
+  if (online()) {
+    try {
+      const q = new URLSearchParams({ date: k, master: 'any', services: SERVICES[0] ? SERVICES[0].id : '' });
+      free = (await api('/api/slots?' + q)).map(x => fmtTime(x.time)).slice(0, 6);
+    } catch (e) { free = []; }
+    if (!free.length) { $('#todaySlots').innerHTML = `<span class="sub">На сегодня окон нет — выберите другой день в записи.</span>`; return; }
+  }
   $('#todaySlots').innerHTML = free.map(t => `<button class="chip chip--slot" type="button" data-quick="${t}">${t}</button>`).join('');
 }
 $('#todaySlots').addEventListener('click', e => {
@@ -275,6 +329,7 @@ $('#todaySlots').addEventListener('click', e => {
   $$('#dates .date').forEach(x => x.classList.toggle('is-on', x.dataset.date === state.date));
   renderSlots(); renderCart();
   go('book'); state.step = state.picked.size ? 2 : 1; renderStep();
+  if (online()) state.slot = null; // время подтвердим после выбора услуг
 });
 
 /* ---------------- смета ---------------- */
@@ -362,7 +417,8 @@ $('#fPhone').addEventListener('input', e => {
 ['fName', 'fPhone'].forEach(id => $(`#${id}`).addEventListener('input', () => showErr(id, false)));
 
 /* ---------------- отправка ---------------- */
-function submit() {
+async function submit() {
+  if (online()) return submitOnline();
   const { items, sum, min } = totals();
   const visit = {
     id: Date.now(), when: whenLabel(), date: state.date, slot: state.slot,
@@ -391,6 +447,46 @@ function submit() {
   sparkle();
   setMain({ visible: false });
 }
+let sending = false;
+async function submitOnline() {
+  if (sending) return;
+  if (!authed()) {
+    const msg = 'Запись доступна только внутри Telegram. Откройте приложение через бота салона.';
+    inTG && tg.showAlert ? tg.showAlert(msg) : alert(msg);
+    return;
+  }
+  const start_at = state.slotMap[state.slot];
+  if (!start_at) { haptic.err(); state.step = 3; renderStep(); renderSlots(); return; }
+  sending = true;
+  try { tg.MainButton.showProgress(true); } catch (e) {}
+  try {
+    const { items } = totals();
+    const r = await api('/api/bookings', { method: 'POST', body: JSON.stringify({
+      services: [...state.picked], master: state.master || 'any', start_at,
+      name: $('#fName').value.trim(), phone: $('#fPhone').value, note: $('#fNote').value.trim(),
+    }) });
+    haptic.ok();
+    $('#sheetLede').textContent = `${$('#fName').value.trim()}, вы записаны. Ждём вас в салоне.`;
+    $('#sheetList').innerHTML = [
+      ['Визит', whenLabel()], ['Мастер', r.master],
+      ['Услуги', items.map(s => s.name).join(', ')], ['Длительность', dur(r.min)], ['Сумма', money(r.sum)],
+    ].map(([k, v]) => `<li><span>${k}</span><strong>${v}</strong></li>`).join('');
+    $('#sheet').hidden = false;
+    sparkle();
+    setMain({ visible: false });
+  } catch (e) {
+    haptic.err();
+    const msg = e.message === 'slot_taken' ? 'Это время только что заняли. Выберите другое.'
+      : e.message === 'bad contact' ? 'Проверьте имя и телефон.'
+      : e.status === 401 ? 'Не удалось подтвердить вход через Telegram. Перезапустите приложение.'
+      : 'Не получилось записаться. Попробуйте ещё раз.';
+    try { tg.showAlert(msg); } catch (_) { alert(msg); }
+    if (e.message === 'slot_taken') { state.slot = null; state.step = 3; renderStep(); renderSlots(); }
+  } finally {
+    sending = false;
+    try { tg.MainButton.hideProgress(); } catch (e) {}
+  }
+}
 function sparkle() {
   const box = $('.sparkle'); box.innerHTML = '';
   for (let i = 0; i < 20; i++) {
@@ -418,7 +514,22 @@ function saveVisits() {
     try { tg.CloudStorage.setItem('visits', JSON.stringify(state.visits.slice(0, 10)), () => {}); } catch (e) {}
   }
 }
+function bookingToVisit(b) {
+  const d = new Date(b.start_at);
+  const loc = new Date(d.getTime() + 5 * 3600e3);
+  const date = loc.toISOString().slice(0, 10);
+  const slot = `${loc.getUTCHours()}:${String(loc.getUTCMinutes()).padStart(2, '0')}`;
+  const dd = new Date(date + 'T00:00:00');
+  return { id: b.id, remote: true, date, slot, past: d.getTime() < Date.now(),
+    when: `${dd.getDate()} ${MONF[dd.getMonth()]}, ${DOW[dd.getDay()]} · ${slot}`,
+    master: b.master || '—', services: b.services || [], sum: b.sum, min: b.min };
+}
 function loadVisits(done) {
+  if (authed()) {
+    api('/api/my-bookings').then(list => { state.visits = list.map(bookingToVisit); })
+      .catch(e => console.warn('visits', e)).finally(done);
+    return;
+  }
   if (inTG && tg.CloudStorage) {
     try {
       tg.CloudStorage.getItem('visits', (err, val) => {
@@ -447,7 +558,7 @@ function renderVisits() {
       <p class="visit__sum">${dur(v.min)} · ${money(v.sum)}</p>
       <div class="visit__acts">
         <button class="btn btn--ghost btn--sm" type="button" data-repeat="${v.id}">Повторить</button>
-        <button class="btn btn--quiet btn--sm" type="button" data-cancel="${v.id}">Отменить</button>
+        ${v.past ? '' : `<button class="btn btn--quiet btn--sm" type="button" data-cancel="${v.id}">Отменить</button>`}
       </div>
     </article>`).join('');
 }
@@ -469,9 +580,15 @@ $('#visitsWrap').addEventListener('click', e => {
   }
   if (can) {
     const id = can.dataset.cancel;
-    const drop = () => {
+    const drop = async () => {
+      const v = state.visits.find(x => String(x.id) === id);
+      if (v && v.remote) {
+        try { await api(`/api/bookings/${id}/cancel`, { method: 'POST' }); }
+        catch (e) { haptic.err(); try { tg.showAlert('Не удалось отменить запись.'); } catch (_) {} return; }
+      }
       state.visits = state.visits.filter(x => String(x.id) !== id);
-      saveVisits(); renderVisits(); haptic.tap();
+      if (!(v && v.remote)) saveVisits();
+      renderVisits(); haptic.tap();
     };
     if (inTG && tg.showConfirm) { try { return tg.showConfirm('Отменить эту запись?', ok => ok && drop()); } catch (e) {} }
     drop();
@@ -506,8 +623,11 @@ function init() {
     $('#notice').hidden = false;
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyScheme);
   }
-  renderServices(); renderMasters(); renderSlots(); renderToday(); renderCart(); renderStep();
-  loadVisits(() => { renderVisits(); });
+  renderServices(); renderMasters(); renderSlots(); renderCart(); renderStep();
   go('home', { silent: true });
+  loadCatalog().then(() => {
+    renderTeam(); renderServices(); renderMasters(); renderToday(); renderCart(); syncChrome();
+    loadVisits(() => { renderVisits(); });
+  });
 }
 init();
