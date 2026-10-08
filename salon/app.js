@@ -24,7 +24,7 @@ const SALON = {
   openHour: 10, closeHour: 21,          // сетка слотов записи
 };
 /* адрес backend на Render; пусто — демо-режим без сервера */
-const API_URL = 'https://salon-api.onrender.com';
+const API_URL = 'https://salon-api-6ddo.onrender.com';
 
 /* ---------------- данные ---------------- */
 let SERVICES = [
