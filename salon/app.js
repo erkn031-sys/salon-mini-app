@@ -458,6 +458,11 @@ async function submitOnline() {
   const start_at = state.slotMap[state.slot];
   if (!start_at) { haptic.err(); state.step = 3; renderStep(); renderSlots(); return; }
   sending = true;
+  /* разрешение боту писать клиенту: подтверждение и напоминания */
+  await new Promise(done => {
+    try { if (tg.requestWriteAccess && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9')) return tg.requestWriteAccess(() => done()); } catch (e) {}
+    done();
+  });
   try { tg.MainButton.showProgress(true); } catch (e) {}
   try {
     const { items } = totals();
